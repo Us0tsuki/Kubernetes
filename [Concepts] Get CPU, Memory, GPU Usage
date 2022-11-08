@@ -1,0 +1,10 @@
+
+Get Cluster CPU and GPU usage:
+
+service@c-project-host-001:~/Documents$ kubectl top nodes
+NAME                 CPU(cores)   CPU%   MEMORY(bytes)   MEMORY%
+c-project-host-001   2008m        16%    16192Mi         50%
+c-project-host-002   673m         5%     11838Mi         37%
+c-project-host-003   200m         1%     30945Mi         48%
+c-project-host-004   1187m        7%     15221Mi         23%
+c-project-host-006   3766m        5%     47808Mi         37%
