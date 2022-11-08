@@ -1,0 +1,31 @@
+Job机制
+Job用来创建1个或多个Pod,并保证指定数量(.spec.completions)的Pod成功完成。当一个Pod成功完成时(.status.phase=Succeeded)，Job会记录已完成的Pod的数量，但完成的数量达到指定值时，这个Job就完成了。可以通过以下3种方式来判断一个Job是否已完成：
+	• .status.completionTime是否为空。Job完成时该字段会被设置成Job完成的时间，否则为空
+	• .spec.completions和.status.succeeded是否相等,即对比期望完成数和已成功数，当二者相等时，表示Job已经完成
+	• .status.conditions[0].type：type为Complete和Failed时，分别表示Job执行成功和失败
+Pod的中的容器可能因为各种各样的原因失败，比如退出码不为0、超出内存限制被kill掉，容器失败分两种情况：
+	• .spec.template.spec.restartPolicy = "OnFailure":容器失败后会不断重启，直到成功（退出码为0）
+	• .spec.template.spec.restartPolicy = "Never"：容器不会重启，Pod的状态转为Failed
+当Pod执行失败时，Job会不断创建一个新的Pod进行重试，直到失败次数达到.spec.backoffLimit指定的数值，整个Job的执行失败。可以通过判断.status.failed和.spec.backoffLimit是否相等，即已失败数是否已经达到上限，来判断Job是否已经执行失败。如下，当.spec.backoffLimit设置为3时，.status.failed已经达到3，Job失败，不会再尝试创建新的Pod：
+kubectl get -n demo jobs j-centos-2020-08-01-15-19-55-w -oyaml |grep status -A 10
+status:
+  conditions:
+  - lastProbeTime: "2020-08-01T07:21:04Z"
+    lastTransitionTime: "2020-08-01T07:21:04Z"
+    message: Job has reached the specified backoff limit
+    reason: BackoffLimitExceeded
+    status: "True"
+    type: Failed
+  failed: 3
+  startTime: "2020-08-01T07:19:55Z"
+
+Pod在执行过程中被意外删除(如使用kubectl delete)，Job会重新创建一个新的Pod。
+适用场景
+Job不是设计用来完成通信密集型的并行程序，如科学计算领域常见的场景。它支持并行地处理一组独立但相关的work item，如发送邮件，渲染帧，转码文件和扫描NoSql数据库中的key
+相关配置
+	• .spec.completions：完成该Job需要执行成功的Pod数
+	• .spec.parallelism：能够同时运行的Pod数
+	• .spec.backoffLimit：允许执行失败的Pod数，默认值是6，0表示不允许Pod执行失败。如果Pod是restartPolicy为Nerver，则失败后会创建新的Pod，如果是OnFailed，则会重启Pod，不管是哪种情况，只要Pod失败一次就计算一次，而不是等整个Pod失败后再计算一个。当失败的次数达到该限制时，整个Job随即结束，所有正在运行中的Pod都会被删除
+	• .spec.activeDeadlineSeconds: Job的超时时间，一旦一个Job运行的时间超出该限制，则Job失败，所有运行中的Pod会被结束并删除。该配置指定的值必须是个正整数。不指定则不会超时
+参考资料
+https://kubernetes.io/docs/concepts/workloads/controllers/job/
