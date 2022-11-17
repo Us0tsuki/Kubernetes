@@ -1,5 +1,5 @@
-https://github.com/kubernetes-client/java/issues/86
 
+Q: https://github.com/kubernetes-client/java/issues/86
 2021-02-03 09:30:23,830 | INFO  | async-executor-6     | c.h.h.t.service.platform.CceService | deleteJob() 160 | Catching exception because kubernetes delete bugs , cause : 
 java.lang.IllegalStateException: Expected a string but was BEGIN_OBJECT at line 1 column 4218 path $.status
 	at com.google.gson.stream.JsonReader.nextString(JsonReader.java:826)
@@ -23,7 +23,7 @@ Fix:
 https://github.com/kubernetes-client/java/pull/1445/commits/030261885269717a9888c43779b7d9db7180f262
 
 
-2.
+Q:
 root@ecs-train-kubernetes-hdfs-0001:~/apiserver# kubectl apply -f apiserver-deployment.yaml
 secret/crypto unchanged
 error: error parsing apiserver-deployment.yaml: error converting YAML to JSON: yaml: line 57: mapping values are not allowed in this context
@@ -32,8 +32,8 @@ Note: If you have multiple files separated by "---" in a same yaml file, the lin
 
 Always use YAML Linter before submitting(http://www.yamllint.com/).
 
-
-	3. Q: Delete ingress-controller, ingress-nginx namespace stuck at Terminating
+3. Q: Delete ingress-controller, ingress-nginx namespace stuck at Terminating
+```
 	service@c-project-host-001:/etc/kubernetes$ kubectl get ns
 	NAME              STATUS        AGE
 	default           Active        26d
@@ -64,10 +64,10 @@ Always use YAML Linter before submitting(http://www.yamllint.com/).
 	  - kubernetes
 	status:
 	  phase: Terminating
+````
 	
-	
-	Most answers mention editing the yaml file or update the k8s object to clear the finalizer array, which will not solve the real problem.
-	
+Most answers mention editing the yaml file or update the k8s object to clear the finalizer array, which will not solve the real problem.
+````	
 	service@c-project-host-001:/etc/kubernetes$ kubectl api-resources
 	...
 	clusterrolebindings                            rbac.authorization.k8s.io      false        ClusterRoleBinding
@@ -111,30 +111,38 @@ Always use YAML Linter before submitting(http://www.yamllint.com/).
 	    reason: MissingEndpoints
 	    status: "False"
 	    type: Available
-	
-	Restart the metric server finally solved the problem.
-	
-	
-	Q: How to copy file to/from host machine
-	A:
-	• To copy a file from the local file system to a container, run the command for Docker container or Kubernetes pod, respectively:
+````
+Restart the metric server finally solved the problem.
+
+
+Q: How to copy file to/from host machine
+A:
+To copy a file from the local file system to a container, run the command for Docker container or Kubernetes pod, respectively:
+````
 docker cp <src-path> <container>:<dest-path> 
 kubectl cp <src-path> <your-pod-name>:<dest-path> 
+````
 For example:
+````
 docker cp "C:\ProcDump\procdump64.exe" sitecore-xm1_cm_1:"C:\" 
 kubectl cp "C:\ProcDump\procdump64.exe" k8s-xm-cm-pod:procdump64.exe
-	• To copy a file from the container to the local file system, use:
+````
+To copy a file from the container to the local file system, use:
+````
 docker cp <container>:<src-path> <local-dest-path> 
 kubectl cp <your-pod-name>:<src-path> <local-dest-path> 
+````
 For example:
+````
 docker cp sitecore-xm1_cm_1:"C:\inetpub\wwwroot\App_Data\logs" "C:\" 
 kubectl cp k8s-xm-cm-pod:some-file.txt "C:\"
-
+````
 
 Q:  Failed to setup network for pod \ using network plugins \"cni\": no IP addresses available in network: podnet; Skipping pod
 A: 
 This started to happen after I did a kubeadm reset and kubeadm init/join ... again.
 Here's what I did to fix (on master and slaves):
+````
 kubeadm reset
 systemctl stop kubelet
 systemctl stop docker
@@ -149,10 +157,9 @@ ifconfig docker0 down
 
 ip link delete cni0
 ip link delete flannel.1
-
+````
 (you may need to manually umount filesystems from /var/lib/kubelet before calling rm on that dir)
 After doing that I started docker manually and restarted the kubeadm process
-
 
 Q: Host is unreachable. The upstream ingress-nginx controller directs doesn't even exists!
 ingress nginx log:
@@ -165,6 +172,7 @@ Since I just changed the system time, think the reason might be the upstream of 
 Restarting ingress-nginx controller solved this issue.+
 
 Q: Ingress-NGINX returns 400 with follwing text/html message:
+````
 <html>
 <head>
     <title>400 Request Header Or Cookie Too Large</title>
@@ -178,11 +186,11 @@ Q: Ingress-NGINX returns 400 with follwing text/html message:
     <center>nginx</center>
 </body>
 </html>
-
+````
 A: Knowing the reason being that the 'Authorization' header is too large ~8.2k bytes， I changed the access endpoint from ingress-nginx controller to in-cluster service address(octopus-common-apiserver-user.default.svc.cluster.local:8902) to bypass nginx, but it seems the request still goes through ingress-nginx(w/ same return value and through NGINX log trace)! Finally the problem is solved though the following annotation:
 
 
----
+<pre><code>
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -198,12 +206,15 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-buffer-size: 96k
     nginx.ingress.kubernetes.io/proxy-read-timeout: "1000"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "1000"
-    nginx.ingress.kubernetes.io/server-snippet: | # this is where the magic happens
+    <b>nginx.ingress.kubernetes.io/server-snippet: | # this is where the magic happens
       client_header_buffer_size 100k;
-      large_client_header_buffers 4 100k;
-
+      large_client_header_buffers 4 100k;</b>
+      ...
+</code></pre>
 
 Q: Sync pod time with host machine time?
 A: 
+````
 $ ll /etc/local*
-Irwxrwxrwx 1 root root 33 Nov 17 'etc/ localti% /usr/share/zoneinfo/asia/Shanghai 
+Irwxrwxrwx 1 root root 33 Nov 17 2021 /etc/localtime -> /usr/share/zoneinfo/asia/Shanghai
+````
